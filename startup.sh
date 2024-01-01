@@ -14,6 +14,16 @@ MOODLE_BRANCH=MOODLE_402_STABLE
 MOODLE_COMPOSE_CMD=$MOODLE_DOCKER_DIR/bin/moodle-docker-compose
 MOODLE_DB_WAIT_CMD=$MOODLE_DOCKER_DIR/bin/moodle-docker-wait-for-db
 
+# check docker compose version
+# REQUIRED: >=2.19
+docker_compose_version=$(docker compose version --short)
+major=$(echo "$docker_compose_version" | cut -d. -f1)
+minor=$(echo "$docker_compose_version" | cut -d. -f2)
+if [ "$major" != "2" ] || [ "$minor" -lt "19" ]; then
+    echo "[ERR] docker compose >=2.19 is REQUIRED, but found $docker_compose_version"
+    exit 1
+fi
+
 # check extra hosts
 match=$(grep 'host.docker.internal' /etc/hosts)
 if [ "$match" == "" ] || echo "$match" | grep -q '#'; then

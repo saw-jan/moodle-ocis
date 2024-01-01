@@ -14,15 +14,6 @@ MOODLE_BRANCH=MOODLE_402_STABLE
 MOODLE_COMPOSE_CMD=$MOODLE_DOCKER_DIR/bin/moodle-docker-compose
 MOODLE_DB_WAIT_CMD=$MOODLE_DOCKER_DIR/bin/moodle-docker-wait-for-db
 
-# cleanup
-docker compose -f ocis/ocis.yml down -v
-"$MOODLE_COMPOSE_CMD" down -v
-
-# early exit if we are shutting down
-if [ "$1" == "down" ]; then
-    exit 0
-fi
-
 # check extra hosts
 match=$(grep 'host.docker.internal' /etc/hosts)
 if [ "$match" == "" ] || echo "$match" | grep -q '#'; then
@@ -101,6 +92,15 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 EOF
+fi
+
+# cleanup
+docker compose -f ocis/ocis.yml down -v
+"$MOODLE_COMPOSE_CMD" down -v
+
+# early exit if we are shutting down
+if [ "$1" == "down" ]; then
+    exit 0
 fi
 
 # start moodle services

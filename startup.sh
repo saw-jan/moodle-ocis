@@ -20,6 +20,13 @@ if [ "$1" == "down" ]; then
     exit 0
 fi
 
+# check extra hosts
+match=$(grep 'host.docker.internal' /etc/hosts)
+if [ "$match" == "" ] || echo "$match" | grep -q '#'; then
+    echo "Adding 'host.docker.internal' to /etc/hosts"
+    echo -e "127.0.0.1	host.docker.internal" | sudo tee -a /etc/hosts >/dev/null
+fi
+
 # check ocis certs
 OCIS_CERTS_DIR=$PWD/ocis/certs
 if [ ! -f "$OCIS_CERTS_DIR"/ocis.crt ] || [ ! -f "$OCIS_CERTS_DIR"/ocis.pem ]; then

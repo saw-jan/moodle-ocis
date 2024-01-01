@@ -136,5 +136,10 @@ sleep 5
     --adminpass="admin" \
     --adminemail="admin@example.com"
 
+# configure HTTP security
+"$MOODLE_COMPOSE_CMD" exec webserver php admin/cli/cfg.php --name=curlsecurityblockedhosts --set=""
+"$MOODLE_COMPOSE_CMD" exec webserver php admin/cli/cfg.php --name=curlsecurityallowedport --set="9200"
+
 # init behat tests
+# uncomment the following line if you want to run behat tests
 # "$MOODLE_COMPOSE_CMD" exec webserver php admin/tool/behat/cli/init.php

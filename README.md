@@ -1,19 +1,25 @@
 # Moodle with oCIS File Sharing Server
 
-1. Deploy
+- Deploy
 
-   ```bash
-   bash startup.sh
-   ```
+  ```bash
+  bash moodled
+  ```
 
-2. Access servers:
+- Access servers:
 
-   moodle: https://host.docker.internal:8000
+  moodle: https://host.docker.internal:8000
 
-   ocis: https://host.docker.internal:9200
+  ocis: https://host.docker.internal:9200
 
-3. Stop the services
+- Stop the services
 
-   ```bash
-   bash startup.sh down
-   ```
+  ```bash
+  bash moodled down
+  ```
+
+- Pull docker images
+
+  ```bash
+  bash moodled pull
+  ```

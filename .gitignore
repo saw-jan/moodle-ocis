@@ -1,3 +1,4 @@
-moodle*
+moodle/
+moodle-docker/
 certs
 traefik

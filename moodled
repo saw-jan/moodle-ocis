@@ -130,6 +130,12 @@ fi
 "$MOODLE_COMPOSE_CMD" cp "$OCIS_CERTS_DIR"/ocis.crt webserver:/usr/local/share/ca-certificates/
 "$MOODLE_COMPOSE_CMD" exec webserver update-ca-certificates
 
+# configure ocis idp
+OCIS_IDP_CONFIG=ocis/idp.yaml
+cp ocis/idp.yaml.example "$OCIS_IDP_CONFIG"
+sed -i "s/https:\/\/localhost/https:\/\/$EXTRA_HOST/g" "$OCIS_IDP_CONFIG"
+sed -i "s/moodle_host/$MOODLE_DOCKER_WEB_HOST/g" "$OCIS_IDP_CONFIG"
+sed -i "s/moodle_port/$MOODLE_DOCKER_WEB_PORT/g" "$OCIS_IDP_CONFIG"
 # start ocis
 docker compose -f ocis/ocis.yml up -d
 timeout=30

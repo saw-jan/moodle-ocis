@@ -2,3 +2,4 @@ moodle/
 moodle-docker/
 certs
 traefik
+ocis/idp.yaml

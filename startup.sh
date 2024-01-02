@@ -1,9 +1,11 @@
 #!/bin/bash
 
+export EXTRA_HOST=host.docker.internal
+
 export MOODLE_DOCKER_WWWROOT=$PWD/moodle
 export MOODLE_DOCKER_DB=pgsql
 export MOODLE_DOCKER_PHP_VERSION=8.1
-export MOODLE_DOCKER_WEB_HOST=host.docker.internal
+export MOODLE_DOCKER_WEB_HOST=$EXTRA_HOST
 export MOODLE_DOCKER_WEB_PORT=8000
 export MOODLE_DOCKER_SELENIUM_VNC_PORT=5900
 export MOODLE_DOCKER_BROWSER=chrome
@@ -25,10 +27,10 @@ if [ "$major" != "2" ] || [ "$minor" -lt "19" ]; then
 fi
 
 # check extra hosts
-match=$(grep 'host.docker.internal' /etc/hosts)
+match=$(grep "$EXTRA_HOST" /etc/hosts)
 if [ "$match" == "" ] || echo "$match" | grep -q '#'; then
-    echo "Adding 'host.docker.internal' to /etc/hosts"
-    echo -e "127.0.0.1	host.docker.internal" | sudo tee -a /etc/hosts >/dev/null
+    echo "Adding '$EXTRA_HOST' to /etc/hosts"
+    echo -e "127.0.0.1	$EXTRA_HOST" | sudo tee -a /etc/hosts >/dev/null
 fi
 
 # check ocis certs
@@ -36,7 +38,7 @@ OCIS_CERTS_DIR=$PWD/ocis/certs
 if [ ! -f "$OCIS_CERTS_DIR"/ocis.crt ] || [ ! -f "$OCIS_CERTS_DIR"/ocis.pem ]; then
     rm -rf "$OCIS_CERTS_DIR"
     mkdir -p "$OCIS_CERTS_DIR"
-    openssl req -x509 -newkey rsa:2048 -keyout "$OCIS_CERTS_DIR"/ocis.pem -out "$OCIS_CERTS_DIR"/ocis.crt -nodes -days 365 -subj '/CN=host.docker.internal'
+    openssl req -x509 -newkey rsa:2048 -keyout "$OCIS_CERTS_DIR"/ocis.pem -out "$OCIS_CERTS_DIR"/ocis.crt -nodes -days 365 -subj "/CN=$EXTRA_HOST"
 fi
 
 # moodle setup
@@ -55,27 +57,27 @@ if [ ! -f "$MOODLE_DOCKER_WWWROOT/config.php" ]; then
 fi
 
 if [ ! -f "$MOODLE_DOCKER_DIR/local.yml" ]; then
-    cat >"$MOODLE_DOCKER_DIR/local.yml" <<'EOF'
+    cat >"$MOODLE_DOCKER_DIR/local.yml" <<EOF
 services:
   webserver:
     labels:
       traefik.enable: true
       traefik.http.routers.webserver.tls: true
-      traefik.http.routers.webserver.rule: Host(`host.docker.internal`)
+      traefik.http.routers.webserver.rule: Host(\`$EXTRA_HOST\`)
       traefik.http.routers.webserver.entrypoints: websecure
       traefik.http.services.webserver.loadbalancer.server.port: 80
     ports: !reset [] # reset port mapping
     extra_hosts:
-      - host.docker.internal:host-gateway
+      - $EXTRA_HOST:host-gateway
     environment:
-      MOODLE_DISABLE_CURL_SECURITY: 'true'
-      MOODLE_OCIS_URL: 'https://host.docker.internal:9200'
-      MOODLE_OCIS_CLIENT_ID: 'sdk'
-      MOODLE_OCIS_CLIENT_SECRET: 'UBntmLjC2yYCeHwsyj73Uwo9TAaecAetRwMw0xYcvNL9yRdLSUi0hUAHfvCHFeFh'
+      MOODLE_DISABLE_CURL_SECURITY: true
+      MOODLE_OCIS_URL: https://$EXTRA_HOST:9200
+      MOODLE_OCIS_CLIENT_ID: sdk
+      MOODLE_OCIS_CLIENT_SECRET: UBntmLjC2yYCeHwsyj73Uwo9TAaecAetRwMw0xYcvNL9yRdLSUi0hUAHfvCHFeFh
 
   selenium:
     extra_hosts:
-      - host.docker.internal:host-gateway
+      - $EXTRA_HOST:host-gateway
 
   traefik:
     image: traefik:v2.9.1
@@ -98,7 +100,7 @@ services:
       - 8000:443
       - 8080:8080 # traefik dashboard
     extra_hosts:
-      - host.docker.internal:host-gateway
+      - $EXTRA_HOST:host-gateway
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 EOF
@@ -116,17 +118,25 @@ fi
 # start moodle services
 "$MOODLE_COMPOSE_CMD" up -d
 
-sleep 5
-
 "$MOODLE_COMPOSE_CMD" cp "$OCIS_CERTS_DIR"/ocis.crt webserver:/usr/local/share/ca-certificates/
 "$MOODLE_COMPOSE_CMD" exec webserver update-ca-certificates
-"$MOODLE_DB_WAIT_CMD"
 
 # start ocis
 docker compose -f ocis/ocis.yml up -d
-sleep 5
+timeout=30
+start_time=$(date +%s)
+while [ "$(curl -sk https://$EXTRA_HOST:9200/ocs/v1.php/cloud/capabilities -w %\{http_code\} -o /dev/null)" != "200" ]; do
+    curr_time=$(date +%s)
+    elapsed_time=$(($curr_time - $start_time))
+    if [ $elapsed_time -gt $timeout ]; then
+        echo "[ERR] ocis was not ready after $timeout seconds"
+        exit 1
+    fi
+    sleep 1
+done
 
 # install moodle
+"$MOODLE_DB_WAIT_CMD"
 "$MOODLE_COMPOSE_CMD" exec webserver \
     php admin/cli/install_database.php \
     --agree-license \

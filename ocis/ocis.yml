@@ -2,20 +2,20 @@ version: '3.8'
 
 services:
   ocis:
-    image: owncloud/ocis:latest
+    image: owncloud/ocis:${OCIS_BRANCH:-latest}
     entrypoint: sh
     command: ['-c', 'ocis init || true ; ocis server']
     ports:
       - 9200:9200
     environment:
       OCIS_INSECURE: true
-      OCIS_URL: https://host.docker.internal:9200
+      OCIS_URL: https://${EXTRA_HOST:-host.docker.internal}:9200
       PROXY_HTTP_ADDR: 0.0.0.0:9200
       PROXY_TRANSPORT_TLS_KEY: /certs/ocis.pem
       PROXY_TRANSPORT_TLS_CERT: /certs/ocis.crt
       IDM_ADMIN_PASSWORD: admin
     extra_hosts:
-      - host.docker.internal:host-gateway
+      - ${EXTRA_HOST:-host.docker.internal}:host-gateway
     volumes:
       - ./certs:/certs
       - ./idp.yaml:/etc/ocis/idp.yaml

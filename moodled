@@ -137,6 +137,8 @@ function startOcis() {
     openssl req -x509 -newkey rsa:2048 -keyout "$OCIS_CERTS_DIR"/ocis.pem -out "$OCIS_CERTS_DIR"/ocis.crt -nodes -days 365 -subj "/CN=$MOODLE_EXTRA_HOST"
   fi
 
+  OCIS_CERTS_FILE="$OCIS_CERTS_DIR"/ocis.crt
+
   # configure ocis idp
   OCIS_IDP_CONFIG=ocis/idp.yaml
   cp ocis/idp.yaml.example "$OCIS_IDP_CONFIG"
@@ -193,18 +195,23 @@ function installMoodle() {
   "$MOODLE_COMPOSE_CMD" exec webserver php admin/tool/behat/cli/init.php
 }
 
+function help() {
+  echo -e "Usage: \e[32m$0\e[0m \e[36m<COMMAND>\e[0m \e[93m[OPTION]\e[0m"
+  echo -e "  -h, --help      show help"
+  echo -e "  \e[36mup\e[0m              start all services"
+  echo -e "    \e[93m-f, --fresh\e[0m   start with fresh config.php and local.yml"
+  echo -e "    \e[93m--skip-ocis\e[0m   do not start ocis service"
+  echo -e "  \e[36minstall\e[0m         install moodle"
+  echo -e "    \e[93m--ocis-cert\e[0m   path to ocis cert file"
+  echo -e "  \e[36mpull\e[0m            pull docker images"
+  echo -e "  \e[36mdown\e[0m            shutdown services"
+}
+
 # command options
 while [ $# -gt 0 ]; do
   case "$1" in
   -h | --help)
-    echo "Usage: $0 [OPTION]"
-    echo "  -h, --help      show help"
-    echo "  -f, --fresh     start with fresh config.php and local.yml"
-    echo "  --skip-ocis     do not start ocis service"
-    echo "  --ocis-cert     path to ocis cert file"
-    echo "  install         install moodle"
-    echo "  pull            pull docker images"
-    echo "  down            shutdown services"
+    help
     exit 0
     ;;
   -f | --fresh)
@@ -219,6 +226,10 @@ while [ $# -gt 0 ]; do
   --ocis-cert)
     OCIS_CERTS_FILE="$2"
     shift
+    shift
+    ;;
+  up)
+    CMD="up"
     shift
     ;;
   install)
@@ -248,23 +259,26 @@ fi
 checkDockerComposeVersion
 checkExtraHost
 
-# initialize moodle repos
-init
+if [ "$CMD" == "up" ]; then
+  # initialize moodle repos
+  init
+  # cleanup previous run
+  down
 
-# cleanup previous run
-down
+  # start moodle services
+  "$MOODLE_COMPOSE_CMD" up -d
 
-# start moodle services
-"$MOODLE_COMPOSE_CMD" up -d
+  if [ "$SKIP_OCIS" == "true" ]; then
+    echo -e "\nWith \e[93m--skip-ocis\e[0m option, you need to start ocis service manually"
+    echo "After ocis is ready, run this command to install moodle:"
+    echo -e "  \e[36mbash moodled install --ocis-cert <cert-file-path>\e[0m"
+    exit 0
+  fi
 
-if [ "$SKIP_OCIS" == "true" ]; then
-  echo -e "\nWith \e[93m--skip-ocis\e[0m option, you need to start ocis service manually"
-  echo "After ocis is ready, run this command to install moodle:"
-  echo -e "  \e[36mbash moodled install --ocis-cert <cert-file-path>\e[0m"
-  exit 0
+  # run ocis server
+  startOcis
+  # install moodle
+  installMoodle
 fi
 
-# run ocis server
-startOcis
-# install moodle
-installMoodle
+help

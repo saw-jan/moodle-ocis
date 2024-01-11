@@ -3,7 +3,7 @@
 - Deploy
 
   ```bash
-  bash moodled
+  ./moodled up
   ```
 
 - Access servers:
@@ -15,11 +15,11 @@
 - Stop the services
 
   ```bash
-  bash moodled down
+  ./moodled down
   ```
 
-- Pull docker images
+- For more commands see:
 
   ```bash
-  bash moodled pull
+  ./moodled -h
   ```

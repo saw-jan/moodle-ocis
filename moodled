@@ -14,7 +14,7 @@ export MOODLE_DOCKER_WEB_HOST=$MOODLE_EXTRA_HOST
 export MOODLE_DOCKER_WEB_PORT=8000
 export MOODLE_DOCKER_SELENIUM_VNC_PORT=5900
 export MOODLE_DOCKER_BROWSER=chrome
-export MOODLE_BEHAT_WEB_PORT=8001
+export MOODLE_DOCKER_BEHAT_WEB_PORT=8001
 
 MOODLE_DOCKER_DIR=$PWD/moodle-docker
 MOODLE_BRANCH=MOODLE_402_STABLE
@@ -38,10 +38,10 @@ function checkDockerComposeVersion() {
 
 # check extra hosts
 function checkExtraHost() {
-  match=$(grep "$MOODLE_EXTRA_HOST" /etc/hosts)
+  match=$(grep "$1" /etc/hosts)
   if [ "$match" == "" ] || echo "$match" | grep -q '#'; then
-    echo "Adding '$MOODLE_EXTRA_HOST' to /etc/hosts"
-    echo -e "127.0.0.1	$MOODLE_EXTRA_HOST" | sudo tee -a /etc/hosts >/dev/null
+    echo "Adding '$1' to /etc/hosts"
+    echo -e "127.0.0.1	$1" | sudo tee -a /etc/hosts >/dev/null
   fi
 }
 
@@ -59,7 +59,7 @@ function init() {
   if [ ! -f "$MOODLE_DOCKER_WWWROOT/config.php" ]; then
     cp "$MOODLE_DOCKER_DIR"/config.docker-template.php "$MOODLE_DOCKER_WWWROOT"/config.php
     sed -i 's/"http:\/\/{$host}";/"https:\/\/{$host}";\n\t$CFG->sslproxy = true;/g' "$MOODLE_DOCKER_WWWROOT"/config.php
-    sed -i "s/http:\/\/webserver/https:\/\/$MOODLE_EXTRA_HOST:$MOODLE_BEHAT_WEB_PORT/g" "$MOODLE_DOCKER_WWWROOT"/config.php
+    sed -i "s/http:\/\/webserver/https:\/\/$MOODLE_EXTRA_HOST:$MOODLE_DOCKER_BEHAT_WEB_PORT/g" "$MOODLE_DOCKER_WWWROOT"/config.php
   fi
 
   if [ ! -f "$MOODLE_DOCKER_DIR/local.yml" ]; then
@@ -145,6 +145,7 @@ function startOcis() {
   sed -i "s/https:\/\/localhost/https:\/\/$MOODLE_EXTRA_HOST/g" "$OCIS_IDP_CONFIG"
   sed -i "s/moodle_host/$MOODLE_DOCKER_WEB_HOST/g" "$OCIS_IDP_CONFIG"
   sed -i "s/moodle_port/$MOODLE_DOCKER_WEB_PORT/g" "$OCIS_IDP_CONFIG"
+  sed -i "s/moodle_behat_port/$MOODLE_DOCKER_BEHAT_WEB_PORT/g" "$OCIS_IDP_CONFIG"
   # start ocis
   docker compose -f ocis/ocis.yml up -d
   timeout=30
@@ -246,6 +247,7 @@ while [ $# -gt 0 ]; do
     ;;
   *)
     echo "Unknown option: $1"
+    help
     exit 1
     ;;
   esac
@@ -257,7 +259,7 @@ if [ "$CMD" == "install" ]; then
 fi
 
 checkDockerComposeVersion
-checkExtraHost
+checkExtraHost $MOODLE_EXTRA_HOST
 
 if [ "$CMD" == "up" ]; then
   # initialize moodle repos
@@ -281,4 +283,6 @@ if [ "$CMD" == "up" ]; then
   installMoodle
 fi
 
-help
+if [ "$1" == "" ]; then
+  help
+fi

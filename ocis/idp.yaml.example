@@ -44,6 +44,7 @@ clients:
     secret: UBntmLjC2yYCeHwsyj73Uwo9TAaecAetRwMw0xYcvNL9yRdLSUi0hUAHfvCHFeFh
     redirect_uris:
       - https://moodle_host:moodle_port/admin/oauth2callback.php
+      - https://moodle_host:moodle_behat_port/admin/oauth2callback.php
       - https://webserver/admin/oauth2callback.php
     origins: []
     application_type: ''

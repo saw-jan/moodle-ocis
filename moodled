@@ -79,6 +79,11 @@ EOF
     sed -i 's/"http:\/\/{$host}";/"https:\/\/{$host}";\n\t$CFG->sslproxy = true;/g' "$MOODLE_DOCKER_WWWROOT"/config.php
     sed -i "s/http:\/\/webserver/https:\/\/$MOODLE_EXTRA_HOST:$MOODLE_DOCKER_BEHAT_WEB_PORT/g" "$MOODLE_DOCKER_WWWROOT"/config.php
   fi
+  # PATCH: enable sslproxy
+  # you can remove this after fix is in the upstream
+  if ! grep -q "\$CFG->sslproxy" "$MOODLE_DOCKER_WWWROOT"/lib/setup.php; then
+    sed -i "s/\$CFG->dataroot = \$CFG->behat_dataroot;/\$CFG->dataroot = \$CFG->behat_dataroot;\n\t\t\$CFG->sslproxy = true;/g" "$MOODLE_DOCKER_WWWROOT"/lib/setup.php
+  fi
 
   if [ ! -f "$MOODLE_DOCKER_DIR/local.yml" ]; then
     cat >"$MOODLE_DOCKER_DIR/local.yml" <<EOF
